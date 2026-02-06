@@ -124,6 +124,22 @@
 <div class="subtitle">Hover to reveal memories. Click a circle to read the note. Press <b>H</b> to add a hotspot.</div>
 
     <div id="viewer"></div>
+    <div style="text-align:center; margin-top:14px;">
+  <button id="pickBtn" style="
+    background: rgba(255,255,255,0.06);
+    color: #e9e9ee;
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 999px;
+    padding: 10px 16px;
+    cursor: pointer;
+  ">
+    Hotspot Picker: OFF
+  </button>
+  <span id="pickHint" style="color:#9fa0ad; margin-left:10px; font-size:13px;">
+    Tip: click this button, then click the mosaic to copy a memory block
+  </span>
+</div>
+
   </div>
 
   <div class="modal-backdrop" id="backdrop">
@@ -231,8 +247,21 @@ fetch(iiifInfo)
     info["@id"] = BASE;                 // BASE must point to the folder that contains info.json + tiles/
     info["id"] = BASE;                  // some generators use "id" instead of "@id"
 
+    fetch(iiifInfo)
+  .then(r => r.json())
+  .then(info => {
+    // Fix bad @id if present
+    info["@id"] = BASE;
+    info["id"] = BASE;
+
     viewer.open(info);
-    viewer.addHandler("open", () => addHotspots(info));
+
+    viewer.addOnceHandler("open", () => {
+      addHotspots(info);
+      initPicker(info); // ✅ attach picker only after viewer is ready
+    });
+  });
+
   })
   .catch(err => {
     console.error(err);
@@ -327,6 +356,79 @@ Line 10\`
   event.preventDefaultAction = true;
 });
 // ---------- End Hotspot Picker Mode ----------
+  function initPicker(info) {
+  const imgW = info.width;
+  const imgH = info.height;
+
+  let pickMode = false;
+  let pickSize = 220; // default square size in pixels
+
+  const btn = document.getElementById("pickBtn");
+
+  function setButton() {
+    btn.textContent = pickMode ? "Hotspot Picker: ON" : "Hotspot Picker: OFF";
+  }
+  setButton();
+
+  btn.addEventListener("click", () => {
+    pickMode = !pickMode;
+    setButton();
+  });
+
+  // Optional keyboard toggle too (now reliable because viewer is ready)
+  document.addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === "h") {
+      pickMode = !pickMode;
+      setButton();
+    }
+    if (e.key === "+" || e.key === "=") pickSize = Math.min(1200, pickSize + 20);
+    if (e.key === "-" || e.key === "_") pickSize = Math.max(60, pickSize - 20);
+  });
+
+  viewer.addHandler("canvas-click", (event) => {
+    if (!pickMode) return;
+
+    const webPoint = event.position;
+    const viewportPoint = viewer.viewport.pointFromPixel(webPoint);
+    const imagePoint = viewer.viewport.viewportToImageCoordinates(viewportPoint);
+
+    const x = Math.max(0, Math.round(imagePoint.x - pickSize / 2));
+    const y = Math.max(0, Math.round(imagePoint.y - pickSize / 2));
+    const w = pickSize;
+    const h = pickSize;
+
+    const block =
+`{
+  id: "m${Date.now()}",
+  rect: { x: ${x}, y: ${y}, w: ${w}, h: ${h} },
+  title: "Title here",
+  date: "DD MMM YYYY",
+  location: "City, Place",
+  tag: "Stillness",
+  extra: "Weather • Mood • People • Anything",
+  summary: \`Line 1
+Line 2
+Line 3
+Line 4
+Line 5
+Line 6
+Line 7
+Line 8
+Line 9
+Line 10\`
+},`;
+
+    navigator.clipboard.writeText(block).then(() => {
+      alert("Copied hotspot block ✅\nPaste into memories[] in index.html");
+    }).catch(() => {
+      console.log(block);
+      alert("Clipboard blocked. I printed the block to Console (F12).");
+    });
+
+    event.preventDefaultAction = true;
+  });
+}
+
 
 </body>
 </html>
