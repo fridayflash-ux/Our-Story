@@ -221,10 +221,23 @@ Line 10`
     });
 
     // Load IIIF info.json properly
-    fetch(iiifInfo).then(r => r.json()).then(info => {
-      viewer.open(info);
-      viewer.addHandler('open', () => addHotspots(info));
-    });
+fetch(iiifInfo)
+  .then(r => {
+    if (!r.ok) throw new Error("info.json not reachable: " + r.status);
+    return r.json();
+  })
+  .then(info => {
+    // IMPORTANT: Fix wrong @id from example.com
+    info["@id"] = BASE;                 // BASE must point to the folder that contains info.json + tiles/
+    info["id"] = BASE;                  // some generators use "id" instead of "@id"
+
+    viewer.open(info);
+    viewer.addHandler("open", () => addHotspots(info));
+  })
+  .catch(err => {
+    console.error(err);
+    alert(err.message);
+  });
 
     function addHotspots(info) {
       const imgW = info.width;
