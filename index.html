@@ -124,6 +124,44 @@
 <div class="subtitle">Hover to reveal memories. Click a circle to read the note. Press <b>H</b> to add a hotspot.</div>
 
     <div id="viewer"></div>
+    <div style="max-width:1100px;margin:14px auto 0;text-align:center;">
+  <button id="pickBtn" style="
+    background: rgba(255,255,255,0.06);
+    color: #e9e9ee;
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 999px;
+    padding: 10px 16px;
+    cursor: pointer;
+  ">Hotspot Picker: OFF</button>
+
+  <button id="copyBtn" style="
+    margin-left:10px;
+    background: rgba(255,255,255,0.06);
+    color: #e9e9ee;
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 999px;
+    padding: 10px 16px;
+    cursor: pointer;
+  " disabled>Copy last block</button>
+
+  <div id="pickStatus" style="color:#9fa0ad;font-size:13px;margin-top:10px;">
+    Turn Picker ON, then click the mosaic. Your memory block will appear below.
+  </div>
+
+  <textarea id="pickOutput" readonly style="
+    width:100%;
+    margin-top:10px;
+    height:160px;
+    background: rgba(255,255,255,0.04);
+    color:#e9e9ee;
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 12px;
+    line-height: 1.4;
+  "></textarea>
+</div>
+
     <div style="text-align:center; margin-top:14px;">
   <button id="pickBtn" style="
     background: rgba(255,255,255,0.06);
@@ -356,34 +394,43 @@ Line 10\`
   event.preventDefaultAction = true;
 });
 // ---------- End Hotspot Picker Mode ----------
-  function initPicker(info) {
-  const imgW = info.width;
-  const imgH = info.height;
-
+ function initPicker(info) {
   let pickMode = false;
-  let pickSize = 220; // default square size in pixels
+  let pickSize = 220;
+  let lastBlock = "";
 
   const btn = document.getElementById("pickBtn");
+  const copyBtn = document.getElementById("copyBtn");
+  const status = document.getElementById("pickStatus");
+  const out = document.getElementById("pickOutput");
 
-  function setButton() {
+  function setUI() {
     btn.textContent = pickMode ? "Hotspot Picker: ON" : "Hotspot Picker: OFF";
+    status.textContent = pickMode
+      ? "Picker is ON ✅ Click anywhere on the mosaic to generate a hotspot block."
+      : "Picker is OFF. Turn it ON to pick a hotspot.";
   }
-  setButton();
+  setUI();
 
   btn.addEventListener("click", () => {
     pickMode = !pickMode;
-    setButton();
+    setUI();
   });
 
-  // Optional keyboard toggle too (now reliable because viewer is ready)
-  document.addEventListener("keydown", (e) => {
-    if (e.key.toLowerCase() === "h") {
-      pickMode = !pickMode;
-      setButton();
+  copyBtn.addEventListener("click", async () => {
+    if (!lastBlock) return;
+    try {
+      await navigator.clipboard.writeText(lastBlock);
+      status.textContent = "Copied to clipboard ✅ Paste into memories[] in index.html";
+    } catch (e) {
+      status.textContent = "Clipboard blocked. Select the text below and copy manually (Ctrl+C).";
+      out.focus();
+      out.select();
     }
-    if (e.key === "+" || e.key === "=") pickSize = Math.min(1200, pickSize + 20);
-    if (e.key === "-" || e.key === "_") pickSize = Math.max(60, pickSize - 20);
   });
+
+  // Debug: show that we attached the handler
+  console.log("Picker initialized. Image size:", info.width, info.height);
 
   viewer.addHandler("canvas-click", (event) => {
     if (!pickMode) return;
@@ -397,7 +444,7 @@ Line 10\`
     const w = pickSize;
     const h = pickSize;
 
-    const block =
+    lastBlock =
 `{
   id: "m${Date.now()}",
   rect: { x: ${x}, y: ${y}, w: ${w}, h: ${h} },
@@ -418,16 +465,14 @@ Line 9
 Line 10\`
 },`;
 
-    navigator.clipboard.writeText(block).then(() => {
-      alert("Copied hotspot block ✅\nPaste into memories[] in index.html");
-    }).catch(() => {
-      console.log(block);
-      alert("Clipboard blocked. I printed the block to Console (F12).");
-    });
+    out.value = lastBlock;
+    copyBtn.disabled = false;
 
-    event.preventDefaultAction = true;
+    status.textContent = `Captured ✅ x=${x}, y=${y} (size ${w}×${h}). Use "Copy last block".`;
+    event.preventDefaultAction = true; // stop default zoom click behaviours
   });
 }
+
 
 
 </body>
