@@ -1,0 +1,252 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Our Story Mosaic</title>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/openseadragon.min.js"></script>
+
+  <style>
+    html, body { height: 100%; margin: 0; background: #0b0b0f; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 28px 16px 16px; }
+    .title { color: #e9e9ee; font-size: 28px; letter-spacing: 0.3px; font-weight: 300; text-align: center; }
+    .subtitle { color: #bdbdcc; font-size: 16px; text-align: center; margin-top: 10px; }
+    #viewer {
+      margin: 22px auto 0;
+      width: 100%;
+      height: 78vh;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 30px 70px rgba(0,0,0,0.65);
+      background: #0b0b0f;
+    }
+
+    /* Hotspot styling */
+    .hotspot {
+      width: 26px; height: 26px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.22);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.35);
+      cursor: pointer;
+      backdrop-filter: blur(6px);
+      transition: transform .15s ease, background .15s ease, opacity .15s ease;
+      opacity: 0;            /* hidden until hover */
+      pointer-events: none;  /* disabled until hover */
+    }
+    .hotspot:hover { transform: scale(1.12); background: rgba(255,255,255,0.10); }
+
+    /* Show hotspots only when mouse is over the viewer */
+    #viewer:hover .hotspot {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.62);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 9999;
+    }
+    .modal {
+      width: min(720px, 96vw);
+      background: rgba(20,20,26,0.96);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 18px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.70);
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 18px 18px 10px;
+      color: #f2f2f7;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+    }
+    .modal-title { font-size: 20px; font-weight: 600; letter-spacing: 0.2px; }
+    .close {
+      color: #c9c9d2;
+      cursor: pointer;
+      font-size: 22px;
+      line-height: 20px;
+      padding: 6px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.04);
+    }
+    .close:hover { background: rgba(255,255,255,0.08); }
+
+    .meta {
+      padding: 0 18px 14px;
+      color: #c9c9d2;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 14px;
+      font-size: 14px;
+    }
+    .meta b { color: #ececf4; font-weight: 600; }
+    .tag {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: #e6e6ee;
+      font-size: 12px;
+      margin-top: 6px;
+    }
+    .body {
+      padding: 14px 18px 18px;
+      color: #e6e6ee;
+      font-size: 15px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+    .hint {
+      margin-top: 12px;
+      color: #9fa0ad;
+      font-size: 13px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="title">Every moment we lived… still lives here.</div>
+    <div class="subtitle">Hover to reveal memories. Click a circle to read the note.</div>
+
+    <div id="viewer"></div>
+  </div>
+
+  <div class="modal-backdrop" id="backdrop">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" id="mTitle">Memory</div>
+          <div class="tag" id="mTag" style="display:none;"></div>
+        </div>
+        <div class="close" id="closeBtn">✕</div>
+      </div>
+      <div class="meta">
+        <div><b>Date:</b> <span id="mDate">—</span></div>
+        <div><b>Location:</b> <span id="mLoc">—</span></div>
+        <div style="grid-column:1 / -1;"><b>Extras:</b> <span id="mExtra">—</span></div>
+      </div>
+      <div class="body" id="mBody"></div>
+    </div>
+  </div>
+
+  <script>
+    // https://github.com/fridayflash-ux/Our-Story/tree/main: Change this to your GitHub Pages base URL (no trailing slash is fine)
+    const BASE = "https:/https://github.com/fridayflash-ux/Our-Story/tree/main";
+
+    // IIIF info.json lives at: BASE + "/info.json"
+    const iiifInfo = BASE + "/info.json";
+
+    // Your memories (hotspots). You can add as many as you like.
+    // IMPORTANT: x/y/width/height are in image pixel coordinates.
+    const memories = [
+      {
+        id: "m1",
+        rect: { x: 6200, y: 4200, w: 220, h: 220 }, // EDIT THESE
+        title: "A Quiet Beginning",
+        date: "06 Feb 2026",
+        location: "Sydney",
+        tag: "Stillness",
+        extra: "Weather: soft rain • Mood: calm",
+        summary:
+`Line 1
+Line 2
+Line 3
+Line 4
+Line 5
+Line 6
+Line 7
+Line 8
+Line 9
+Line 10`
+      }
+    ];
+
+    // Modal helpers
+    const backdrop = document.getElementById("backdrop");
+    const closeBtn = document.getElementById("closeBtn");
+    function openModal(m) {
+      document.getElementById("mTitle").textContent = m.title || "Memory";
+      document.getElementById("mDate").textContent = m.date || "—";
+      document.getElementById("mLoc").textContent = m.location || "—";
+      document.getElementById("mExtra").textContent = m.extra || "—";
+      document.getElementById("mBody").textContent = m.summary || "";
+      const tagEl = document.getElementById("mTag");
+      if (m.tag) {
+        tagEl.style.display = "inline-block";
+        tagEl.textContent = m.tag;
+      } else {
+        tagEl.style.display = "none";
+      }
+      backdrop.style.display = "flex";
+    }
+    function closeModal() { backdrop.style.display = "none"; }
+    closeBtn.addEventListener("click", closeModal);
+    backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeModal(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+
+    // Create viewer
+    const viewer = OpenSeadragon({
+      id: "viewer",
+      prefixUrl: "https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/images/",
+      showNavigator: true,
+      navigatorPosition: "BOTTOM_RIGHT",
+      showRotationControl: false,
+      showFullPageControl: true,
+      showHomeControl: true,
+      showZoomControl: true,
+      zoomPerScroll: 1.2,
+      animationTime: 0.8,
+      constrainDuringPan: true,
+      maxZoomPixelRatio: 2,
+      tileSources: {
+        "@context": "http://iiif.io/api/image/2/context.json",
+        "@id": iiifInfo.replace("/info.json",""),
+        "height": 1, "width": 1
+      }
+    });
+
+    // Load IIIF info.json properly
+    fetch(iiifInfo).then(r => r.json()).then(info => {
+      viewer.open(info);
+      viewer.addHandler('open', () => addHotspots(info));
+    });
+
+    function addHotspots(info) {
+      const imgW = info.width;
+      const imgH = info.height;
+
+      memories.forEach(m => {
+        // Normalized rect (0..1 in image coordinates)
+        const nx = m.rect.x / imgW;
+        const ny = m.rect.y / imgH;
+        const nw = m.rect.w / imgW;
+        const nh = m.rect.h / imgH;
+
+        const el = document.createElement("div");
+        el.className = "hotspot";
+        el.title = m.title || "Memory";
+        el.addEventListener("click", () => openModal(m));
+
+        // Use OpenSeadragon overlay: position is in viewport/image coordinates
+        const rect = new OpenSeadragon.Rect(nx, ny, nw, nh);
+        viewer.addOverlay({ element: el, location: rect });
+      });
+    }
+  </script>
+</body>
+</html>
