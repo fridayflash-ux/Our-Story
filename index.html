@@ -394,7 +394,7 @@ Line 10\`
   event.preventDefaultAction = true;
 });
 // ---------- End Hotspot Picker Mode ----------
- function initPicker(info) {
+function initPicker(info) {
   let pickMode = false;
   let pickSize = 220;
   let lastBlock = "";
@@ -406,28 +406,30 @@ Line 10\`
 
   function setUI() {
     btn.textContent = pickMode ? "Hotspot Picker: ON" : "Hotspot Picker: OFF";
-    status.textContent = pickMode
-      ? "Picker is ON ✅ Click anywhere on the mosaic to generate a hotspot block."
-      : "Picker is OFF. Turn it ON to pick a hotspot.";
+    status.textContent = pickMode ? "Picker ON ✅ Now click the mosaic" : "Click “OFF” to turn ON";
+    out.style.display = pickMode ? "block" : "none";
   }
   setUI();
 
-  btn.addEventListener("click", () => {
+  // Hard bind click with a debug log
+  btn.onclick = () => {
+    console.log("pickBtn clicked");
     pickMode = !pickMode;
     setUI();
-  });
+  };
 
-  copyBtn.addEventListener("click", async () => {
+  copyBtn.onclick = async () => {
     if (!lastBlock) return;
     try {
       await navigator.clipboard.writeText(lastBlock);
-      status.textContent = "Copied to clipboard ✅ Paste into memories[] in index.html";
+      status.textContent = "Copied ✅ Paste into memories[]";
     } catch (e) {
-      status.textContent = "Clipboard blocked. Select the text below and copy manually (Ctrl+C).";
-      out.focus();
-      out.select();
+      status.textContent = "Clipboard blocked. Select text in box and Ctrl+C.";
+      out.focus(); out.select();
     }
-  });
+  };
+
+  console.log("Picker initialized OK.");
 
   // Debug: show that we attached the handler
   console.log("Picker initialized. Image size:", info.width, info.height);
@@ -466,12 +468,76 @@ Line 10\`
 },`;
 
     out.value = lastBlock;
-    copyBtn.disabled = false;
+   copyBtn.disabled = false;
+copyBtn.style.opacity = "1";
+
 
     status.textContent = `Captured ✅ x=${x}, y=${y} (size ${w}×${h}). Use "Copy last block".`;
     event.preventDefaultAction = true; // stop default zoom click behaviours
   });
 }
+<div id="pickerBar" style="
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 99999;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: rgba(15,15,20,0.82);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 999px;
+  padding: 10px 12px;
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+">
+  <button id="pickBtn" style="
+    pointer-events: auto;
+    background: rgba(255,255,255,0.08);
+    color: #e9e9ee;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 13px;
+  ">Hotspot Picker: OFF</button>
+
+  <button id="copyBtn" style="
+    pointer-events: auto;
+    background: rgba(255,255,255,0.08);
+    color: #e9e9ee;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    opacity: 0.6;
+  " disabled>Copy last</button>
+
+  <span id="pickStatus" style="color:#b8b8c6;font-size:12px;white-space:nowrap;">
+    Click “OFF” to turn ON
+  </span>
+</div>
+
+<textarea id="pickOutput" readonly style="
+  position: fixed;
+  left: 50%;
+  bottom: 72px;
+  transform: translateX(-50%);
+  z-index: 99999;
+  width: min(980px, 94vw);
+  height: 160px;
+  background: rgba(12,12,16,0.92);
+  color:#e9e9ee;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 14px;
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.4;
+  display: none;
+  pointer-events: auto;
+"></textarea>
 
 
 
