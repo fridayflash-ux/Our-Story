@@ -121,7 +121,7 @@
 <body>
   <div class="wrap">
     <div class="title">Every moment we lived… still lives here.</div>
-    <div class="subtitle">Hover to reveal memories. Click a circle to read the note.</div>
+<div class="subtitle">Hover to reveal memories. Click a circle to read the note. Press <b>H</b> to add a hotspot.</div>
 
     <div id="viewer"></div>
   </div>
@@ -261,5 +261,72 @@ fetch(iiifInfo)
       });
     }
   </script>
+  // ---------- Hotspot Picker Mode ----------
+let pickMode = false;
+let pickSize = 220; // default square size in pixels (change anytime)
+
+function togglePickMode() {
+  pickMode = !pickMode;
+  const msg = pickMode
+    ? "Hotspot Picker: ON. Click the mosaic to copy a memory block. (Press H to exit)"
+    : "Hotspot Picker: OFF.";
+  console.log(msg);
+  alert(msg);
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key.toLowerCase() === "h") togglePickMode();
+  if (e.key === "+" || e.key === "=") { pickSize = Math.min(1200, pickSize + 20); console.log("pickSize:", pickSize); }
+  if (e.key === "-" || e.key === "_") { pickSize = Math.max(60, pickSize - 20); console.log("pickSize:", pickSize); }
+});
+
+// Click-to-generate hotspot coords
+viewer.addHandler("canvas-click", (event) => {
+  if (!pickMode) return;
+
+  // Convert click point to image coordinates (pixels)
+  const webPoint = event.position; // in viewer element pixels
+  const viewportPoint = viewer.viewport.pointFromPixel(webPoint);
+  const imagePoint = viewer.viewport.viewportToImageCoordinates(viewportPoint);
+
+  // Create a centered square around click
+  const x = Math.max(0, Math.round(imagePoint.x - pickSize / 2));
+  const y = Math.max(0, Math.round(imagePoint.y - pickSize / 2));
+  const w = pickSize;
+  const h = pickSize;
+
+  const block =
+`{
+  id: "m${Date.now()}",
+  rect: { x: ${x}, y: ${y}, w: ${w}, h: ${h} },
+  title: "Title here",
+  date: "DD MMM YYYY",
+  location: "City, Place",
+  tag: "Stillness",
+  extra: "Weather • Mood • People • Anything",
+  summary: \`Line 1
+Line 2
+Line 3
+Line 4
+Line 5
+Line 6
+Line 7
+Line 8
+Line 9
+Line 10\`
+},`;
+
+  // Copy to clipboard
+  navigator.clipboard.writeText(block).then(() => {
+    alert("Copied hotspot block to clipboard ✅\nPaste it into the memories[] list in index.html.");
+  }).catch(() => {
+    console.log(block);
+    alert("Could not auto-copy (browser blocked). I printed it to Console (F12) ✅");
+  });
+
+  event.preventDefaultAction = true;
+});
+// ---------- End Hotspot Picker Mode ----------
+
 </body>
 </html>
