@@ -401,103 +401,12 @@ Line 10\`
 
     event.preventDefaultAction = true;
   });
-}
+
 
   </script>
 
-  // Copy to clipboard
-  navigator.clipboard.writeText(block).then(() => {
-    alert("Copied hotspot block to clipboard ✅\nPaste it into the memories[] list in index.html.");
-  }).catch(() => {
-    console.log(block);
-    alert("Could not auto-copy (browser blocked). I printed it to Console (F12) ✅");
-  });
+  
 
-  event.preventDefaultAction = true;
-});
-// ---------- End Hotspot Picker Mode ----------
-function initPicker(info) {
-  let pickMode = false;
-  let pickSize = 220;
-  let lastBlock = "";
-
-  const btn = document.getElementById("pickBtn");
-  const copyBtn = document.getElementById("copyBtn");
-  const status = document.getElementById("pickStatus");
-  const out = document.getElementById("pickOutput");
-
-  function setUI() {
-    btn.textContent = pickMode ? "Hotspot Picker: ON" : "Hotspot Picker: OFF";
-    status.textContent = pickMode ? "Picker ON ✅ Now click the mosaic" : "Click “OFF” to turn ON";
-    out.style.display = pickMode ? "block" : "none";
-  }
-  setUI();
-
-  // Hard bind click with a debug log
-  btn.onclick = () => {
-    console.log("pickBtn clicked");
-    pickMode = !pickMode;
-    setUI();
-  };
-
-  copyBtn.onclick = async () => {
-    if (!lastBlock) return;
-    try {
-      await navigator.clipboard.writeText(lastBlock);
-      status.textContent = "Copied ✅ Paste into memories[]";
-    } catch (e) {
-      status.textContent = "Clipboard blocked. Select text in box and Ctrl+C.";
-      out.focus(); out.select();
-    }
-  };
-
-  console.log("Picker initialized OK.");
-
-  // Debug: show that we attached the handler
-  console.log("Picker initialized. Image size:", info.width, info.height);
-
-  viewer.addHandler("canvas-click", (event) => {
-    if (!pickMode) return;
-
-    const webPoint = event.position;
-    const viewportPoint = viewer.viewport.pointFromPixel(webPoint);
-    const imagePoint = viewer.viewport.viewportToImageCoordinates(viewportPoint);
-
-    const x = Math.max(0, Math.round(imagePoint.x - pickSize / 2));
-    const y = Math.max(0, Math.round(imagePoint.y - pickSize / 2));
-    const w = pickSize;
-    const h = pickSize;
-
-    lastBlock =
-`{
-  id: "m${Date.now()}",
-  rect: { x: ${x}, y: ${y}, w: ${w}, h: ${h} },
-  title: "Title here",
-  date: "DD MMM YYYY",
-  location: "City, Place",
-  tag: "Stillness",
-  extra: "Weather • Mood • People • Anything",
-  summary: \`Line 1
-Line 2
-Line 3
-Line 4
-Line 5
-Line 6
-Line 7
-Line 8
-Line 9
-Line 10\`
-},`;
-
-    out.value = lastBlock;
-   copyBtn.disabled = false;
-copyBtn.style.opacity = "1";
-
-
-    status.textContent = `Captured ✅ x=${x}, y=${y} (size ${w}×${h}). Use "Copy last block".`;
-    event.preventDefaultAction = true; // stop default zoom click behaviours
-  });
-}
 <div id="pickerBar" style="
   position: fixed;
   left: 50%;
