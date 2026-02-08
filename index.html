@@ -24,20 +24,44 @@
     }
 
     /* Hotspot styling */
-    .hotspot{
-      width: 26px; height: 26px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.22);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.35);
-      cursor: pointer;
-      backdrop-filter: blur(6px);
-      transition: transform .15s ease, background .15s ease, opacity .15s ease;
-      opacity: 0;
-      pointer-events: none;
-    }
-    .hotspot:hover{ transform: scale(1.12); background: rgba(255,255,255,0.10); }
-    #viewer:hover .hotspot{ opacity: 1; pointer-events: auto; }
+   .hotspot{
+  width: 18px; height: 18px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.26);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.45);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: transform .18s ease, background .18s ease;
+  opacity: 0;
+  pointer-events: none;
+  position: relative;
+}
+#viewer:hover .hotspot{ opacity: 1; pointer-events: auto; }
+
+.hotspot::after{
+  content:"";
+  position:absolute;
+  inset:-8px;
+  border-radius:999px;
+  border: 1px solid rgba(255,255,255,0.20);
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+@keyframes softPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.18), 0 10px 22px rgba(0,0,0,0.45); }
+  70%  { box-shadow: 0 0 0 14px rgba(255,255,255,0.00), 0 14px 30px rgba(0,0,0,0.52); }
+  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.00), 0 10px 22px rgba(0,0,0,0.45); }
+}
+.hotspot:hover{
+  transform: scale(1.14);
+  background: rgba(255,255,255,0.14);
+  animation: softPulse 1.6s ease-out infinite;
+}
+.hotspot:hover::after{ opacity: 1; transform: scale(1); }
+
 
     /* Modal */
     .modal-backdrop{
@@ -264,24 +288,39 @@
         alert(err.message);
       });
 
-    function addHotspots(info){
-      const imgW = info.width;
-      const imgH = info.height;
+   function addHotspots(info) {
+  const imgW = info.width;
+  const imgH = info.height;
 
-      memories.forEach(m => {
-        const nx = m.rect.x / imgW;
-        const ny = m.rect.y / imgH;
-        const nw = m.rect.w / imgW;
-        const nh = m.rect.h / imgH;
+  memories.forEach(m => {
+    // center of the rect in IMAGE pixels
+    const cxImg = m.rect.x + (m.rect.w / 2);
+    const cyImg = m.rect.y + (m.rect.h / 2);
 
-        const el = document.createElement("div");
-        el.className = "hotspot";
-        el.title = m.title || "Memory";
-        el.addEventListener("click", () => openModal(m));
+    // convert image pixels -> viewport coordinates
+    const vpPoint = viewer.viewport.imageToViewportCoordinates(cxImg, cyImg);
 
-        viewer.addOverlay({ element: el, location: new OpenSeadragon.Rect(nx, ny, nw, nh) });
-      });
-    }
+    const el = document.createElement("div");
+    el.className = "hotspot";
+    el.title = m.title || "Memory";
+
+    // click: zoom to that region, then open modal
+    el.addEventListener("click", () => {
+      const rectImg = new OpenSeadragon.Rect(m.rect.x, m.rect.y, m.rect.w, m.rect.h);
+      const rectVp = viewer.viewport.imageToViewportRectangle(rectImg);
+      viewer.viewport.fitBounds(rectVp, true);
+      openModal(m);
+    });
+
+    // IMPORTANT: point overlay keeps element fixed-size (no stretching)
+    viewer.addOverlay({
+      element: el,
+      location: vpPoint,
+      placement: OpenSeadragon.Placement.CENTER
+    });
+  });
+}
+
 
     function initPicker(info){
       let pickMode = false;
