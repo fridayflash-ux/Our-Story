@@ -331,6 +331,82 @@ fetch(iiifInfo)
         viewer.addOverlay({ element: el, location: rect });
       });
     }
+    function initPicker(info) {
+  let pickMode = false;
+  let pickSize = 220;
+  let lastBlock = "";
+
+  const btn = document.getElementById("pickBtn");
+  const copyBtn = document.getElementById("copyBtn");
+  const status = document.getElementById("pickStatus");
+  const out = document.getElementById("pickOutput");
+
+  function setUI() {
+    btn.textContent = pickMode ? "Hotspot Picker: ON" : "Hotspot Picker: OFF";
+    status.textContent = pickMode ? "Picker ON ✅ Click the mosaic" : "Click OFF to turn ON";
+    out.style.display = pickMode ? "block" : "none";
+  }
+  setUI();
+
+  btn.addEventListener("click", () => {
+    pickMode = !pickMode;
+    setUI();
+  });
+
+  copyBtn.addEventListener("click", async () => {
+    if (!lastBlock) return;
+    try {
+      await navigator.clipboard.writeText(lastBlock);
+      status.textContent = "Copied ✅ Paste into memories[] in index.html";
+    } catch {
+      status.textContent = "Clipboard blocked. Select text in box and Ctrl+C.";
+      out.focus(); out.select();
+    }
+  });
+
+  // Attach click handler to the viewer canvas
+  viewer.addHandler("canvas-click", (event) => {
+    if (!pickMode) return;
+
+    const webPoint = event.position;
+    const viewportPoint = viewer.viewport.pointFromPixel(webPoint);
+    const imagePoint = viewer.viewport.viewportToImageCoordinates(viewportPoint);
+
+    const x = Math.max(0, Math.round(imagePoint.x - pickSize / 2));
+    const y = Math.max(0, Math.round(imagePoint.y - pickSize / 2));
+    const w = pickSize;
+    const h = pickSize;
+
+    lastBlock =
+`{
+  id: "m${Date.now()}",
+  rect: { x: ${x}, y: ${y}, w: ${w}, h: ${h} },
+  title: "Title here",
+  date: "DD MMM YYYY",
+  location: "City, Place",
+  tag: "Stillness",
+  extra: "Weather • Mood • People • Anything",
+  summary: \`Line 1
+Line 2
+Line 3
+Line 4
+Line 5
+Line 6
+Line 7
+Line 8
+Line 9
+Line 10\`
+},`;
+
+    out.value = lastBlock;
+    copyBtn.disabled = false;
+    copyBtn.style.opacity = "1";
+    status.textContent = `Captured ✅ x=${x}, y=${y} (size ${w}×${h})`;
+
+    event.preventDefaultAction = true;
+  });
+}
+
   </script>
   // ---------- Hotspot Picker Mode ----------
 let pickMode = false;
