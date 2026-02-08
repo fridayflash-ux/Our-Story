@@ -12,7 +12,8 @@
     .wrap { max-width: 1200px; margin: 0 auto; padding: 28px 16px 16px; }
     .title { color: #e9e9ee; font-size: 28px; letter-spacing: 0.3px; font-weight: 300; text-align: center; }
     .subtitle { color: #bdbdcc; font-size: 16px; text-align: center; margin-top: 10px; }
-    #viewer {
+
+    #viewer{
       margin: 22px auto 0;
       width: 100%;
       height: 78vh;
@@ -23,7 +24,7 @@
     }
 
     /* Hotspot styling */
-    .hotspot {
+    .hotspot{
       width: 26px; height: 26px;
       border-radius: 999px;
       background: rgba(255,255,255,0.06);
@@ -32,19 +33,14 @@
       cursor: pointer;
       backdrop-filter: blur(6px);
       transition: transform .15s ease, background .15s ease, opacity .15s ease;
-      opacity: 0;            /* hidden until hover */
-      pointer-events: none;  /* disabled until hover */
+      opacity: 0;
+      pointer-events: none;
     }
-    .hotspot:hover { transform: scale(1.12); background: rgba(255,255,255,0.10); }
-
-    /* Show hotspots only when mouse is over the viewer */
-    #viewer:hover .hotspot {
-      opacity: 1;
-      pointer-events: auto;
-    }
+    .hotspot:hover{ transform: scale(1.12); background: rgba(255,255,255,0.10); }
+    #viewer:hover .hotspot{ opacity: 1; pointer-events: auto; }
 
     /* Modal */
-    .modal-backdrop {
+    .modal-backdrop{
       position: fixed; inset: 0;
       background: rgba(0,0,0,0.62);
       display: none;
@@ -53,7 +49,7 @@
       padding: 18px;
       z-index: 9999;
     }
-    .modal {
+    .modal{
       width: min(720px, 96vw);
       background: rgba(20,20,26,0.96);
       border: 1px solid rgba(255,255,255,0.10);
@@ -61,7 +57,7 @@
       box-shadow: 0 30px 80px rgba(0,0,0,0.70);
       overflow: hidden;
     }
-    .modal-header {
+    .modal-header{
       padding: 18px 18px 10px;
       color: #f2f2f7;
       display: flex;
@@ -69,8 +65,8 @@
       gap: 12px;
       align-items: start;
     }
-    .modal-title { font-size: 20px; font-weight: 600; letter-spacing: 0.2px; }
-    .close {
+    .modal-title{ font-size: 20px; font-weight: 600; letter-spacing: 0.2px; }
+    .close{
       color: #c9c9d2;
       cursor: pointer;
       font-size: 22px;
@@ -80,9 +76,8 @@
       border: 1px solid rgba(255,255,255,0.10);
       background: rgba(255,255,255,0.04);
     }
-    .close:hover { background: rgba(255,255,255,0.08); }
-
-    .meta {
+    .close:hover{ background: rgba(255,255,255,0.08); }
+    .meta{
       padding: 0 18px 14px;
       color: #c9c9d2;
       display: grid;
@@ -90,8 +85,8 @@
       gap: 10px 14px;
       font-size: 14px;
     }
-    .meta b { color: #ececf4; font-weight: 600; }
-    .tag {
+    .meta b{ color: #ececf4; font-weight: 600; }
+    .tag{
       display: inline-block;
       padding: 6px 10px;
       border-radius: 999px;
@@ -101,19 +96,58 @@
       font-size: 12px;
       margin-top: 6px;
     }
-    .body {
+    .body{
       padding: 14px 18px 18px;
       color: #e6e6ee;
       font-size: 15px;
       line-height: 1.55;
       white-space: pre-wrap;
     }
-    .hint {
-      margin-top: 12px;
-      color: #9fa0ad;
+
+    /* Fixed picker overlay */
+    #pickerBar{
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      z-index: 999999;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background: rgba(15,15,20,0.82);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 999px;
+      padding: 10px 12px;
+      backdrop-filter: blur(10px);
+    }
+    #pickerBar button{
+      background: rgba(255,255,255,0.08);
+      color: #e9e9ee;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 999px;
+      padding: 10px 14px;
+      cursor: pointer;
       font-size: 13px;
-      padding-top: 10px;
-      border-top: 1px solid rgba(255,255,255,0.08);
+    }
+    #copyBtn{ opacity: 0.6; }
+    #pickStatus{ color:#b8b8c6; font-size:12px; white-space:nowrap; }
+
+    #pickOutput{
+      position: fixed;
+      left: 50%;
+      bottom: 72px;
+      transform: translateX(-50%);
+      z-index: 999999;
+      width: min(980px, 94vw);
+      height: 160px;
+      background: rgba(12,12,16,0.92);
+      color:#e9e9ee;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      padding: 12px;
+      font-size: 12px;
+      line-height: 1.4;
+      display: none;
     }
   </style>
 </head>
@@ -121,65 +155,11 @@
 <body>
   <div class="wrap">
     <div class="title">Every moment we lived… still lives here.</div>
-<div class="subtitle">Hover to reveal memories. Click a circle to read the note. Press <b>H</b> to add a hotspot.</div>
-
+    <div class="subtitle">Hover to reveal memories. Click a circle to read the note.</div>
     <div id="viewer"></div>
-    <div style="max-width:1100px;margin:14px auto 0;text-align:center;">
-  <button id="pickBtn" style="
-    background: rgba(255,255,255,0.06);
-    color: #e9e9ee;
-    border: 1px solid rgba(255,255,255,0.14);
-    border-radius: 999px;
-    padding: 10px 16px;
-    cursor: pointer;
-  ">Hotspot Picker: OFF</button>
-
-  <button id="copyBtn" style="
-    margin-left:10px;
-    background: rgba(255,255,255,0.06);
-    color: #e9e9ee;
-    border: 1px solid rgba(255,255,255,0.14);
-    border-radius: 999px;
-    padding: 10px 16px;
-    cursor: pointer;
-  " disabled>Copy last block</button>
-
-  <div id="pickStatus" style="color:#9fa0ad;font-size:13px;margin-top:10px;">
-    Turn Picker ON, then click the mosaic. Your memory block will appear below.
   </div>
 
-  <textarea id="pickOutput" readonly style="
-    width:100%;
-    margin-top:10px;
-    height:160px;
-    background: rgba(255,255,255,0.04);
-    color:#e9e9ee;
-    border: 1px solid rgba(255,255,255,0.10);
-    border-radius: 12px;
-    padding: 12px;
-    font-size: 12px;
-    line-height: 1.4;
-  "></textarea>
-</div>
-
-    <div style="text-align:center; margin-top:14px;">
-  <button id="pickBtn" style="
-    background: rgba(255,255,255,0.06);
-    color: #e9e9ee;
-    border: 1px solid rgba(255,255,255,0.14);
-    border-radius: 999px;
-    padding: 10px 16px;
-    cursor: pointer;
-  ">
-    Hotspot Picker: OFF
-  </button>
-  <span id="pickHint" style="color:#9fa0ad; margin-left:10px; font-size:13px;">
-    Tip: click this button, then click the mosaic to copy a memory block
-  </span>
-</div>
-
-  </div>
-
+  <!-- Modal -->
   <div class="modal-backdrop" id="backdrop">
     <div class="modal" role="dialog" aria-modal="true">
       <div class="modal-header">
@@ -198,62 +178,53 @@
     </div>
   </div>
 
-  <script>
-    // https://github.com/fridayflash-ux/Our-Story/tree/main: Change this to your GitHub Pages base URL (no trailing slash is fine)
-    const BASE = "https://fridayflash-ux.github.io/Our-Story";
+  <!-- Picker UI -->
+  <div id="pickerBar">
+    <button id="pickBtn">Hotspot Picker: OFF</button>
+    <button id="copyBtn" disabled>Copy last</button>
+    <span id="pickStatus">Click OFF to turn ON</span>
+  </div>
+  <textarea id="pickOutput" readonly></textarea>
 
-    // IIIF info.json lives at: BASE + "/info.json"
+  <script>
+    const BASE = "https://fridayflash-ux.github.io/Our-Story";
     const iiifInfo = BASE + "/info.json";
 
-    // Your memories (hotspots). You can add as many as you like.
-    // IMPORTANT: x/y/width/height are in image pixel coordinates.
     const memories = [
-      {
-        id: "m1",
-        rect: { x: 6200, y: 4200, w: 220, h: 220 }, // EDIT THESE
-        title: "A Quiet Beginning",
-        date: "06 Feb 2026",
-        location: "Sydney",
-        tag: "Stillness",
-        extra: "Weather: soft rain • Mood: calm",
-        summary:
-`Line 1
-Line 2
-Line 3
-Line 4
-Line 5
-Line 6
-Line 7
-Line 8
-Line 9
-Line 10`
-      }
+      // Paste picked blocks here. Example:
+      // {
+      //   id: "m1",
+      //   rect: { x: 1767, y: 1021, w: 220, h: 220 },
+      //   title: "A Quiet Beginning",
+      //   date: "06 Feb 2026",
+      //   location: "Sydney",
+      //   tag: "Stillness",
+      //   extra: "Weather: soft rain • Mood: calm",
+      //   summary: `Line 1\nLine 2\n...`
+      // },
     ];
 
     // Modal helpers
     const backdrop = document.getElementById("backdrop");
     const closeBtn = document.getElementById("closeBtn");
-    function openModal(m) {
+    function openModal(m){
       document.getElementById("mTitle").textContent = m.title || "Memory";
       document.getElementById("mDate").textContent = m.date || "—";
       document.getElementById("mLoc").textContent = m.location || "—";
       document.getElementById("mExtra").textContent = m.extra || "—";
       document.getElementById("mBody").textContent = m.summary || "";
+
       const tagEl = document.getElementById("mTag");
-      if (m.tag) {
-        tagEl.style.display = "inline-block";
-        tagEl.textContent = m.tag;
-      } else {
-        tagEl.style.display = "none";
-      }
+      if (m.tag){ tagEl.style.display = "inline-block"; tagEl.textContent = m.tag; }
+      else { tagEl.style.display = "none"; }
       backdrop.style.display = "flex";
     }
-    function closeModal() { backdrop.style.display = "none"; }
+    function closeModal(){ backdrop.style.display = "none"; }
     closeBtn.addEventListener("click", closeModal);
-    backdrop.addEventListener("click", (e) => { if (e.target === backdrop) closeModal(); });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+    backdrop.addEventListener("click", (e)=>{ if(e.target === backdrop) closeModal(); });
+    document.addEventListener("keydown", (e)=>{ if(e.key === "Escape") closeModal(); });
 
-    // Create viewer
+    // Viewer
     const viewer = OpenSeadragon({
       id: "viewer",
       prefixUrl: "https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/images/",
@@ -266,52 +237,36 @@ Line 10`
       zoomPerScroll: 1.2,
       animationTime: 0.8,
       constrainDuringPan: true,
-      maxZoomPixelRatio: 2,
-      tileSources: {
-        "@context": "http://iiif.io/api/image/2/context.json",
-        "@id": iiifInfo.replace("/info.json",""),
-        "height": 1, "width": 1
-      }
+      maxZoomPixelRatio: 2
     });
-
-    // Load IIIF info.json properly
-fetch(iiifInfo)
-  .then(r => {
-    if (!r.ok) throw new Error("info.json not reachable: " + r.status);
-    return r.json();
-  })
-  .then(info => {
-    // IMPORTANT: Fix wrong @id from example.com
-    info["@id"] = BASE;                 // BASE must point to the folder that contains info.json + tiles/
-    info["id"] = BASE;                  // some generators use "id" instead of "@id"
 
     fetch(iiifInfo)
-  .then(r => r.json())
-  .then(info => {
-    // Fix bad @id if present
-    info["@id"] = BASE;
-    info["id"] = BASE;
+      .then(r => {
+        if (!r.ok) throw new Error("info.json not reachable: " + r.status);
+        return r.json();
+      })
+      .then(info => {
+        // patch bad @id/id if generator wrote example.com
+        info["@id"] = BASE;
+        info["id"] = BASE;
 
-    viewer.open(info);
+        viewer.open(info);
 
-    viewer.addOnceHandler("open", () => {
-      addHotspots(info);
-      initPicker(info); // ✅ attach picker only after viewer is ready
-    });
-  });
+        viewer.addOnceHandler("open", () => {
+          addHotspots(info);
+          initPicker(info);
+        });
+      })
+      .catch(err => {
+        console.error(err);
+        alert(err.message);
+      });
 
-  })
-  .catch(err => {
-    console.error(err);
-    alert(err.message);
-  });
-
-    function addHotspots(info) {
+    function addHotspots(info){
       const imgW = info.width;
       const imgH = info.height;
 
       memories.forEach(m => {
-        // Normalized rect (0..1 in image coordinates)
         const nx = m.rect.x / imgW;
         const ny = m.rect.y / imgH;
         const nw = m.rect.w / imgW;
@@ -322,58 +277,56 @@ fetch(iiifInfo)
         el.title = m.title || "Memory";
         el.addEventListener("click", () => openModal(m));
 
-        // Use OpenSeadragon overlay: position is in viewport/image coordinates
-        const rect = new OpenSeadragon.Rect(nx, ny, nw, nh);
-        viewer.addOverlay({ element: el, location: rect });
+        viewer.addOverlay({ element: el, location: new OpenSeadragon.Rect(nx, ny, nw, nh) });
       });
     }
-    function initPicker(info) {
-  let pickMode = false;
-  let pickSize = 220;
-  let lastBlock = "";
 
-  const btn = document.getElementById("pickBtn");
-  const copyBtn = document.getElementById("copyBtn");
-  const status = document.getElementById("pickStatus");
-  const out = document.getElementById("pickOutput");
+    function initPicker(info){
+      let pickMode = false;
+      let pickSize = 220;
+      let lastBlock = "";
 
-  function setUI() {
-    btn.textContent = pickMode ? "Hotspot Picker: ON" : "Hotspot Picker: OFF";
-    status.textContent = pickMode ? "Picker ON ✅ Click the mosaic" : "Click OFF to turn ON";
-    out.style.display = pickMode ? "block" : "none";
-  }
-  setUI();
+      const btn = document.getElementById("pickBtn");
+      const copyBtn = document.getElementById("copyBtn");
+      const status = document.getElementById("pickStatus");
+      const out = document.getElementById("pickOutput");
 
-  btn.addEventListener("click", () => {
-    pickMode = !pickMode;
-    setUI();
-  });
+      function setUI(){
+        btn.textContent = pickMode ? "Hotspot Picker: ON" : "Hotspot Picker: OFF";
+        status.textContent = pickMode ? "Picker ON ✅ Click the mosaic" : "Click OFF to turn ON";
+        out.style.display = pickMode ? "none" : "none"; // hidden until first pick
+      }
+      setUI();
 
-  copyBtn.addEventListener("click", async () => {
-    if (!lastBlock) return;
-    try {
-      await navigator.clipboard.writeText(lastBlock);
-      status.textContent = "Copied ✅ Paste into memories[] in index.html";
-    } catch {
-      status.textContent = "Clipboard blocked. Select text in box and Ctrl+C.";
-      out.focus(); out.select();
-    }
-  });
+      btn.addEventListener("click", () => {
+        pickMode = !pickMode;
+        setUI();
+      });
 
-  // Attach click handler to the viewer canvas
-  viewer.addHandler("canvas-click", (event) => {
-    if (!pickMode) return;
+      copyBtn.addEventListener("click", async () => {
+        if (!lastBlock) return;
+        try{
+          await navigator.clipboard.writeText(lastBlock);
+          status.textContent = "Copied ✅ Paste into memories[]";
+        }catch{
+          status.textContent = "Clipboard blocked. Select text and Ctrl+C.";
+          out.focus(); out.select();
+        }
+      });
 
-    const webPoint = event.position;
-    const viewportPoint = viewer.viewport.pointFromPixel(webPoint);
-    const imagePoint = viewer.viewport.viewportToImageCoordinates(viewportPoint);
+      viewer.addHandler("canvas-click", (event) => {
+        if (!pickMode) return;
 
-    const x = Math.max(0, Math.round(imagePoint.x - pickSize / 2));
-    const y = Math.max(0, Math.round(imagePoint.y - pickSize / 2));
-    const w = pickSize;
-    const h = pickSize;
+        const webPoint = event.position;
+        const viewportPoint = viewer.viewport.pointFromPixel(webPoint);
+        const imagePoint = viewer.viewport.viewportToImageCoordinates(viewportPoint);
 
-    lastBlock =
+        const x = Math.max(0, Math.round(imagePoint.x - pickSize / 2));
+        const y = Math.max(0, Math.round(imagePoint.y - pickSize / 2));
+        const w = pickSize;
+        const h = pickSize;
+
+        lastBlock =
 `{
   id: "m${Date.now()}",
   rect: { x: ${x}, y: ${y}, w: ${w}, h: ${h} },
@@ -394,79 +347,15 @@ Line 9
 Line 10\`
 },`;
 
-    out.value = lastBlock;
-    copyBtn.disabled = false;
-    copyBtn.style.opacity = "1";
-    status.textContent = `Captured ✅ x=${x}, y=${y} (size ${w}×${h})`;
+        out.value = lastBlock;
+        out.style.display = "block";
+        copyBtn.disabled = false;
+        copyBtn.style.opacity = "1";
+        status.textContent = `Captured ✅ x=${x}, y=${y} (${w}×${h})`;
 
-    event.preventDefaultAction = true;
-  });
-
-
+        event.preventDefaultAction = true;
+      });
+    }
   </script>
-
-  
-
-<div id="pickerBar" style="
-  position: fixed;
-  left: 50%;
-  bottom: 18px;
-  transform: translateX(-50%);
-  z-index: 999999;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  background: rgba(15,15,20,0.82);
-  border: 1px solid rgba(255,255,255,0.14);
-  border-radius: 999px;
-  padding: 10px 12px;
-  backdrop-filter: blur(10px);
-">
-  <button id="pickBtn" style="
-    background: rgba(255,255,255,0.08);
-    color: #e9e9ee;
-    border: 1px solid rgba(255,255,255,0.18);
-    border-radius: 999px;
-    padding: 10px 14px;
-    cursor: pointer;
-    font-size: 13px;
-  ">Hotspot Picker: OFF</button>
-
-  <button id="copyBtn" style="
-    background: rgba(255,255,255,0.08);
-    color: #e9e9ee;
-    border: 1px solid rgba(255,255,255,0.18);
-    border-radius: 999px;
-    padding: 10px 14px;
-    cursor: pointer;
-    font-size: 13px;
-    opacity: 0.6;
-  " disabled>Copy last</button>
-
-  <span id="pickStatus" style="color:#b8b8c6;font-size:12px;white-space:nowrap;">
-    Click OFF to turn ON
-  </span>
-</div>
-
-<textarea id="pickOutput" readonly style="
-  position: fixed;
-  left: 50%;
-  bottom: 72px;
-  transform: translateX(-50%);
-  z-index: 999999;
-  width: min(980px, 94vw);
-  height: 160px;
-  background: rgba(12,12,16,0.92);
-  color:#e9e9ee;
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 14px;
-  padding: 12px;
-  font-size: 12px;
-  line-height: 1.4;
-  display: none;
-"></textarea>
-
-
-
 </body>
 </html>
