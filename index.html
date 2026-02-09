@@ -335,47 +335,65 @@
         alert(err.message);
       });
 
- function addHotspots(info) {
-  console.log("addHotspots() running. Memories:", memories.length);
+function addHotspots(info) {
 
   memories.forEach(m => {
-    // center of the rect in IMAGE pixels
-    const cxImg = m.rect.x + (m.rect.w / 2);
-    const cyImg = m.rect.y + (m.rect.h / 2);
 
-    // convert image pixels -> viewport coords
-    const vpPoint = viewer.viewport.imageToViewportCoordinates(cxImg, cyImg);
+    // center of memory rect
+    const cx = m.rect.x + (m.rect.w / 2);
+    const cy = m.rect.y + (m.rect.h / 2);
+
+    const vpPoint = viewer.viewport.imageToViewportCoordinates(cx, cy);
 
     const el = document.createElement("div");
     el.className = "hotspot";
-   // Mini hover preview (Netflix-ish)
-const card = document.createElement("div");
-card.className = "preview-card";
-card.innerHTML = `
-  <div class="preview-title">${escapeHtml(m.title || "Memory")}</div>
-  <div class="preview-meta">
-    ${escapeHtml(m.date || "")}${m.date && (m.location || m.extra) ? " • " : ""}
-    ${escapeHtml(m.location || "")}
-  </div>
-  ${m.tag ? `<div class="preview-tag">${escapeHtml(m.tag)}</div>` : ""}
-`;
-el.appendChild(card);
 
-    el.title = m.title || "Memory";
+    // ---------- Netflix Preview ----------
+    const card = document.createElement("div");
+    card.className = "preview-card";
+    card.innerHTML = `
+      <div class="preview-title">${m.title || "Memory"}</div>
+      <div class="preview-meta">
+        ${m.date || ""}${m.date && m.location ? " • " : ""}${m.location || ""}
+      </div>
+      ${m.tag ? `<div class="preview-tag">${m.tag}</div>` : ""}
+    `;
 
+    el.appendChild(card);
+
+    // ---------- CLICK ----------
     el.addEventListener("click", (e) => {
-  e.preventDefault();
-  e.stopPropagation();
 
-  // optional: zoom into the memory region first
-  const rectImg = new OpenSeadragon.Rect(m.rect.x, m.rect.y, m.rect.w, m.rect.h);
-  const rectVp = viewer.viewport.imageToViewportRectangle(rectImg);
-  viewer.viewport.fitBounds(rectVp, true);
+      e.preventDefault();
+      e.stopPropagation(); // VERY important with OpenSeadragon
 
-  openModal(m);
-});
+      // smooth cinematic zoom
+      const rect = new OpenSeadragon.Rect(
+        m.rect.x,
+        m.rect.y,
+        m.rect.w,
+        m.rect.h
+      );
 
+      viewer.viewport.fitBounds(
+        viewer.viewport.imageToViewportRectangle(rect),
+        true
+      );
+
+      openModal(m);
+    });
+
+    // ⭐ THE missing piece you noticed
+    viewer.addOverlay({
+      element: el,
+      location: vpPoint,
+      placement: OpenSeadragon.Placement.CENTER,
+      checkResize: false
+    });
+
+  });
 }
+
 
 function escapeHtml(s){
   return String(s || "")
