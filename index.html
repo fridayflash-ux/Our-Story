@@ -117,7 +117,7 @@
       align-items: center;
       justify-content: center;
       padding: 18px;
-      z-index: 9999;
+      z-index: 2000000;
     }
     .modal{
       width: min(720px, 96vw);
@@ -294,6 +294,7 @@
     function closeModal(){ backdrop.style.display = "none"; }
     closeBtn.addEventListener("click", closeModal);
     backdrop.addEventListener("click", (e)=>{ if(e.target === backdrop) closeModal(); });
+    document.querySelector(".modal").addEventListener("click", (e) => e.stopPropagation());
     document.addEventListener("keydown", (e)=>{ if(e.key === "Escape") closeModal(); });
 
     // Viewer
@@ -362,15 +363,18 @@ el.appendChild(card);
 
     el.title = m.title || "Memory";
 
-    el.addEventListener("click", () => openModal(m));
+    el.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
 
-    // POINT overlay: fixed-size marker (no stretching)
-    viewer.addOverlay({
-      element: el,
-      location: vpPoint,
-      placement: OpenSeadragon.Placement.CENTER
-    });
-  });
+  // optional: zoom into the memory region first
+  const rectImg = new OpenSeadragon.Rect(m.rect.x, m.rect.y, m.rect.w, m.rect.h);
+  const rectVp = viewer.viewport.imageToViewportRectangle(rectImg);
+  viewer.viewport.fitBounds(rectVp, true);
+
+  openModal(m);
+});
+
 }
 
 function escapeHtml(s){
