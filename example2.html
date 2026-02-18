@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Memory Mosaic — Journal Panel</title>
+
+  <!-- Optional fonts (will fall back gracefully if blocked/offline) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Playfair+Display:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg: #0f1115;
+      --card: rgba(255,255,255,0.06);
+      --stroke: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.65);
+      --accent: rgba(88, 255, 196, 0.85);
+
+      --paper: rgba(255, 248, 235, 0.97);
+      --ink: rgba(25, 18, 12, 0.92);
+      --paperStroke: rgba(30, 20, 10, 0.15);
+
+      --shadow: 0 18px 46px rgba(0,0,0,0.45);
+      --radius: 18px;
+      --gap: 12px;
+
+      --maxWidth: 1260px;
+    }
+
+    *{ box-sizing: border-box; }
+    html, body{ height: 100%; }
+    body{
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(1200px 700px at 10% 10%, rgba(88, 255, 196, 0.08), transparent),
+        radial-gradient(1000px 600px at 90% 20%, rgba(139, 92, 246, 0.10), transparent),
+        var(--bg);
+      color: var(--text);
+    }
+
+    header{
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      padding: 18px 18px 10px;
+      border-bottom: 1px solid var(--stroke);
+      backdrop-filter: blur(10px);
+      background: linear-gradient(to bottom, rgba(15,17,21,0.92), rgba(15,17,21,0.72));
+    }
+    .headerWrap{
+      max-width: var(--maxWidth);
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    header h1{
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: .2px;
+    }
+    header p{
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .controls{
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    button{
+      border: 1px solid var(--stroke);
+      background: var(--card);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform .12s ease, background .2s ease, border-color .2s ease;
+    }
+    button:hover{
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.09);
+    }
+
+    main{
+      max-width: var(--maxWidth);
+      margin: 0 auto;
+      padding: 16px 18px 26px;
+    }
+
+    /* --- Layout: grid + right panel --- */
+    .layout{
+      display: grid;
+      grid-template-columns: 1.45fr 0.95fr;
+      gap: 14px;
+      align-items: start;
+    }
+
+    /* --- Mosaic grid --- */
+    .mosaic{
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: var(--gap);
+      padding: 0;
+      margin: 0;
+      list-style: none;
+    }
+
+    .tile{
+      grid-column: span 4;
+      aspect-ratio: 1 / 1;
+      border-radius: var(--radius);
+      overflow: hidden;
+      position: relative;
+      border: 1px solid var(--stroke);
+      box-shadow: 0 10px 28px rgba(0,0,0,0.28);
+      background: rgba(255,255,255,0.02);
+      cursor: pointer;
+      outline: none;
+      display: block;
+      transform: translateZ(0);
+    }
+    /* Mosaic variety */
+    .tile--wide{ grid-column: span 8; aspect-ratio: 16 / 9; }
+    .tile--tall{ grid-column: span 4; aspect-ratio: 3 / 4; }
+    .tile--big { grid-column: span 6; aspect-ratio: 1 / 1; }
+
+    .tile img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      filter: saturate(1.05) contrast(1.02);
+      transition: transform .35s ease, filter .35s ease;
+    }
+    .tile:hover img,
+    .tile:focus-visible img{
+      transform: scale(1.03);
+      filter: saturate(1.1) contrast(1.05);
+    }
+
+    .tile::after{
+      content: "";
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity .18s ease;
+      background: linear-gradient(to top, rgba(0,0,0,0.40), transparent 55%);
+      pointer-events: none;
+    }
+    .tile:hover::after,
+    .tile:focus-visible::after{ opacity: 1; }
+
+    .tileBadge{
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(10,10,12,0.42);
+      color: rgba(255,255,255,0.92);
+      font-size: 12px;
+      max-width: calc(100% - 20px);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity .18s ease, transform .18s ease;
+      backdrop-filter: blur(8px);
+    }
+    .tile:hover .tileBadge,
+    .tile:focus-visible .tileBadge{
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Selected tile styling */
+    .tile.is-active{
+      border-color: rgba(88,255,196,0.35);
+      box-shadow: 0 0 0 2px rgba(88,255,196,0.18), 0 10px 28px rgba(0,0,0,0.28);
+    }
+
+    /* --- Right journal panel --- */
+    aside{
+      position: sticky;
+      top: 84px; /* below header */
+    }
+
+    .journal{
+      border-radius: 22px;
+      border: 1px solid var(--paperStroke);
+      background: var(--paper);
+      color: var(--ink);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .journalTop{
+      padding: 16px 16px 12px;
+      border-bottom: 1px dashed rgba(0,0,0,0.16);
+      position: relative;
+    }
+
+    /* paper texture */
+    .journalTop::before,
+    .journalBody::before{
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 30%, rgba(0,0,0,0.04), transparent 55%),
+        repeating-linear-gradient(
+          to bottom,
+          rgba(0,0,0,0.03),
+          rgba(0,0,0,0.03) 1px,
+          transparent 1px,
+          transparent 22px
+        );
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    .journalTitle{
+      position: relative;
+      z-index: 1;
+      margin: 0;
+      font-family: "Playfair Display", Georgia, serif;
+      font-weight: 500;
+      font-size: 20px;
+      letter-spacing: .2px;
+    }
+
+    .journalMeta{
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 10px;
+      margin-top: 8px;
+      color: rgba(25,18,12,0.78);
+      font-size: 12px;
+    }
+
+    .pill{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.08);
+      white-space: nowrap;
+    }
+
+    .dot{
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.22);
+    }
+
+    .journalBody{
+      position: relative;
+      padding: 14px 16px 18px;
+      max-height: calc(100vh - 170px);
+      overflow: auto;
+    }
+
+    .journalText{
+      position: relative;
+      z-index: 1;
+      font-family: "Caveat", system-ui, sans-serif;
+      font-size: 22px;
+      line-height: 1.18;
+      letter-spacing: .2px;
+      white-space: pre-wrap; /* preserves line breaks + paragraphs */
+    }
+
+    .journalHint{
+      position: relative;
+      z-index: 1;
+      margin-top: 12px;
+      font-size: 12px;
+      color: rgba(25,18,12,0.60);
+    }
+
+    /* Small helper panel in case no selection */
+    .emptyState{
+      padding: 12px 0 0;
+      color: rgba(25,18,12,0.70);
+      font-size: 13px;
+      position: relative;
+      z-index: 1;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    /* Mobile layout: panel stacks under mosaic */
+    @media (max-width: 980px){
+      .layout{ grid-template-columns: 1fr; }
+      aside{ position: relative; top: 0; }
+      .journalBody{ max-height: none; }
+    }
+
+    @media (max-width: 560px){
+      header{ padding: 16px 14px 10px; }
+      main{ padding: 14px 14px 24px; }
+      .tile{ grid-column: span 12; }
+      .tile--wide, .tile--big, .tile--tall{ grid-column: span 12; }
+      button{ flex: 1; }
+    }
+
+    footer{
+      max-width: var(--maxWidth);
+      margin: 0 auto;
+      padding: 0 18px 26px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    a.smallLink{ color: rgba(255,255,255,0.78); text-decoration: none; }
+    a.smallLink:hover{ text-decoration: underline; }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="headerWrap">
+      <div>
+        <h1>Memory Mosaic</h1>
+        <p>Click a photo to read its journal entry. Notes are permanent (no random memories).</p>
+      </div>
+
+      <div class="controls">
+        <button id="shuffleBtn" type="button">Shuffle Mosaic</button>
+        <button id="rememberBtn" type="button" title="Remember last opened memory on this device">
+          Remember Last: ON
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="layout">
+      <!-- LEFT: Mosaic -->
+      <section aria-label="Photo mosaic">
+        <div class="mosaic" id="mosaic">
+          <!-- ✅ Replace src paths with your images in /images/ -->
+
+          <button class="tile tile--wide" type="button" data-id="beach-day"
+            data-title="Beach Day"
+            data-date="2024-12-26"
+            data-location="Sydney"
+            data-tags="Family • Summer • Ocean"
+            data-note="The waves were loud and the sun felt gentle — you smiled the whole walk.
+
+We stopped to watch the horizon for a long time and said almost nothing. It was one of those quiet days where everything felt easy.
+
+Later, we found that tiny shell and called it our lucky charm. I still remember the exact moment you placed it in my hand and laughed.
+
+That ice cream melted instantly, but nobody cared.">
+            <img src="images/photo1.jpg" alt="Beach Day photo">
+            <div class="tileBadge">Beach Day</div>
+          </button>
+
+          <button class="tile" type="button" data-id="road-trip"
+            data-title="Road Trip"
+            data-date="2023-08-14"
+            data-location="Blue Mountains"
+            data-tags="Friends • Mountains • Sunset"
+            data-note="The playlist was perfect — especially that one song at sunset.
+
+We took the wrong turn and somehow ended up at the best lookout. It felt like we discovered a secret.
+
+We laughed at how unprepared we were, but the day turned out exactly right.
+
+That little café had the best coffee we’ve ever had. We promised we’d come back.">
+            <img src="images/photo2.jpg" alt="Road Trip photo">
+            <div class="tileBadge">Road Trip</div>
+          </button>
+
+          <button class="tile tile--tall" type="button" data-id="sunday-morning"
+            data-title="Sunday Morning"
+            data-date="2022-03-06"
+            data-location="Home"
+            data-tags="Home • Quiet • Tea"
+            data-note="The whole house was calm — just warm light and tea.
+
+We spoke about nothing and it was exactly what we needed. The kind of silence that feels full rather than empty.
+
+I remember the way the light hit the table and how time felt slow.
+
+That book you recommended became a favourite — and every time I open it, I think of this morning.">
+            <img src="images/photo3.jpg" alt="Sunday Morning photo">
+            <div class="tileBadge">Sunday Morning</div>
+          </button>
+
+          <button class="tile tile--big" type="button" data-id="city-lights"
+            data-title="City Lights"
+            data-date="2021-11-19"
+            data-location="CBD"
+            data-tags="Night • Walk • Music"
+            data-note="We walked with no plan and the city felt like a movie set.
+
+That tiny street musician made the whole moment feel unreal — like the soundtrack had been written for us.
+
+We stopped under the lights and you said, “Let’s remember this forever.”
+
+I didn’t realise then how much I would return to this memory when I needed hope.">
+            <img src="images/photo4.jpg" alt="City Lights photo">
+            <div class="tileBadge">City Lights</div>
+          </button>
+
+          <!-- Add more tiles by duplicating a <button class="tile"...> -->
+        </div>
+      </section>
+
+      <!-- RIGHT: Journal Panel -->
+      <aside aria-label="Journal panel">
+        <div class="journal" role="region" aria-live="polite">
+          <div class="journalTop">
+            <h2 class="journalTitle" id="jTitle">Select a photo</h2>
+
+            <div class="emptyState" id="emptyState">
+              Tip: click any tile to open its permanent journal entry.  
+              You can also share a specific memory using a link like: <code>#beach-day</code>
+            </div>
+
+            <div class="journalMeta" id="jMeta" style="display:none;">
+              <span class="pill"><span class="dot"></span><span id="jDate"></span></span>
+              <span class="pill"><span class="dot"></span><span id="jLocation"></span></span>
+              <span class="pill"><span class="dot"></span><span id="jTags"></span></span>
+            </div>
+          </div>
+
+          <div class="journalBody">
+            <div class="journalText" id="jText"></div>
+            <div class="journalHint" id="jHint" style="display:none;">
+              Keyboard: Tab to a tile → Enter to open.  
+              This device remembers the last opened memory (toggle above).
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <footer>
+    Hosted on GitHub Pages — one file, forever yours.
+  </footer>
+
+  <script>
+    const mosaic = document.getElementById("mosaic");
+    const tiles  = Array.from(mosaic.querySelectorAll(".tile"));
+
+    const jTitle = document.getElementById("jTitle");
+    const jText  = document.getElementById("jText");
+    const jDate  = document.getElementById("jDate");
+    const jLocation = document.getElementById("jLocation");
+    const jTags  = document.getElementById("jTags");
+    const jMeta  = document.getElementById("jMeta");
+    const jHint  = document.getElementById("jHint");
+    const emptyState = document.getElementById("emptyState");
+
+    const shuffleBtn  = document.getElementById("shuffleBtn");
+    const rememberBtn = document.getElementById("rememberBtn");
+
+    let rememberLast = true;
+
+    function formatDate(isoDate) {
+      if (!isoDate) return "";
+      const d = new Date(isoDate);
+      if (Number.isNaN(d.getTime())) return isoDate;
+      return d.toLocaleDateString(undefined, { day:"2-digit", month:"short", year:"numeric" });
+    }
+
+    function setActiveTile(activeId){
+      tiles.forEach(t => t.classList.toggle("is-active", t.dataset.id === activeId));
+    }
+
+    function openMemoryByTile(tile, {pushHash=true} = {}) {
+      const id = tile.dataset.id || "";
+      const title = tile.dataset.title || "Untitled";
+      const date = tile.dataset.date || "";
+      const location = tile.dataset.location || "";
+      const tags = tile.dataset.tags || "";
+      const note = tile.dataset.note || "";
+
+      jTitle.textContent = title;
+      jText.textContent = note; // uses white-space: pre-wrap to preserve paragraphs
+
+      // Show meta & hints once something is selected
+      emptyState.style.display = "none";
+      jMeta.style.display = "flex";
+      jHint.style.display = "block";
+
+      jDate.textContent = formatDate(date);
+      jLocation.textContent = location || "—";
+      jTags.textContent = tags || "—";
+
+      setActiveTile(id);
+
+      if (pushHash && id) {
+        history.replaceState(null, "", `#${encodeURIComponent(id)}`);
+      }
+
+      if (rememberLast && id) {
+        localStorage.setItem("mm_last_id", id);
+      }
+    }
+
+    function openMemoryById(id, {pushHash=false} = {}) {
+      const tile = tiles.find(t => t.dataset.id === id);
+      if (tile) openMemoryByTile(tile, {pushHash});
+    }
+
+    function shuffleMosaic(){
+      // Fisher-Yates shuffle DOM elements
+      const items = Array.from(mosaic.children);
+      for (let i = items.length - 1; i > 0; i--){
+        const j = Math.floor(Math.random() * (i + 1));
+        [items[i], items[j]] = [items[j], items[i]];
+      }
+      mosaic.replaceChildren(...items);
+
+      // Rebuild tiles list & re-wire (buttons keep listeners, but we keep this tidy)
+      // (Listeners remain because elements are the same; no re-attach needed)
+    }
+
+    // Wire up tile clicks
+    tiles.forEach(tile => {
+      tile.addEventListener("click", () => openMemoryByTile(tile, {pushHash:true}));
+      tile.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openMemoryByTile(tile, {pushHash:true});
+        }
+      });
+    });
+
+    shuffleBtn.addEventListener("click", shuffleMosaic);
+
+    // Remember Last toggle
+    function updateRememberBtn(){
+      rememberBtn.textContent = `Remember Last: ${rememberLast ? "ON" : "OFF"}`;
+      rememberBtn.setAttribute("aria-pressed", String(rememberLast));
+    }
+    updateRememberBtn();
+
+    rememberBtn.addEventListener("click", () => {
+      rememberLast = !rememberLast;
+      updateRememberBtn();
+      if (!rememberLast) localStorage.removeItem("mm_last_id");
+    });
+
+    // On load: open by hash OR last remembered OR first tile
+    window.addEventListener("load", () => {
+      const hashId = decodeURIComponent((location.hash || "").replace("#","")).trim();
+
+      if (hashId) {
+        openMemoryById(hashId, {pushHash:false});
+        return;
+      }
+
+      const lastId = rememberLast ? localStorage.getItem("mm_last_id") : null;
+      if (lastId) {
+        openMemoryById(lastId, {pushHash:false});
+        return;
+      }
+
+      // Optional: auto-open first tile (comment out if you prefer empty start)
+      if (tiles[0]) openMemoryByTile(tiles[0], {pushHash:false});
+    });
+  </script>
+</body>
+</html>
