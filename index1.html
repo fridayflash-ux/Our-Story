@@ -23,23 +23,22 @@
       background: #0b0b0f;
     }
 
-    /* Hotspot marker */
-    .hotspot{
+    /* Dot marker (only visual) */
+    .hotspot-dot{
       width: 18px; height: 18px;
       border-radius: 999px;
       background: rgba(255,255,255,0.10);
       border: 1px solid rgba(255,255,255,0.26);
       box-shadow: 0 10px 22px rgba(0,0,0,0.45);
-      cursor: default;
       backdrop-filter: blur(6px);
-      transition: transform .18s ease, background .18s ease;
       opacity: 0;
+      transition: opacity .18s ease, transform .18s ease, background .18s ease;
+      pointer-events: none; /* IMPORTANT: no hover behavior */
       position: relative;
-      pointer-events: auto; /* hover works */
     }
-    #viewer:hover .hotspot{ opacity: 1; }
+    #viewer:hover .hotspot-dot{ opacity: 1; }
 
-    .hotspot::after{
+    .hotspot-dot::after{
       content:"";
       position:absolute;
       inset:-8px;
@@ -49,39 +48,33 @@
       transform: scale(0.92);
       transition: opacity .18s ease, transform .18s ease;
     }
-
-    @keyframes softPulse {
-      0%   { box-shadow: 0 0 0 0 rgba(255,255,255,0.18), 0 10px 22px rgba(0,0,0,0.45); }
-      70%  { box-shadow: 0 0 0 14px rgba(255,255,255,0.00), 0 14px 30px rgba(0,0,0,0.52); }
-      100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.00), 0 10px 22px rgba(0,0,0,0.45); }
-    }
-    .hotspot:hover{
+    .hotspot-dot.is-active{
       transform: scale(1.14);
       background: rgba(255,255,255,0.14);
-      animation: softPulse 1.6s ease-out infinite;
-      z-index: 50;
     }
-    .hotspot:hover::after{ opacity: 1; transform: scale(1); }
+    .hotspot-dot.is-active::after{ opacity: 1; transform: scale(1); }
 
-    /* Netflix-ish FULL note card (hover reveals the whole memory) */
-    .preview-card{
+    /* Floating Netflix card (ONE card total) */
+    .float-card{
       position: absolute;
-      left: 50%;
-      top: -12px;
-      transform: translate(-50%, -100%) translateY(10px);
-      width: min(420px, 78vw);
+      width: min(440px, 80vw);
       padding: 14px 14px 12px;
       border-radius: 16px;
       background: rgba(18,18,24,0.94);
       border: 1px solid rgba(255,255,255,0.14);
       box-shadow: 0 24px 70px rgba(0,0,0,0.72);
       color: #f2f2f7;
-      opacity: 0;
-      pointer-events: auto;
-      transition: opacity .16s ease, transform .16s ease;
       backdrop-filter: blur(14px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .14s ease, transform .14s ease;
+      transform: translate(-50%, -110%) translateY(10px);
     }
-    .preview-card::after{
+    .float-card.show{
+      opacity: 1;
+      transform: translate(-50%, -110%) translateY(0);
+    }
+    .float-card::after{
       content:"";
       position: absolute;
       left: 50%;
@@ -93,22 +86,21 @@
       transform: translateX(-50%) rotate(45deg);
       border-radius: 2px;
     }
-    .preview-header{
+    .fc-header{
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
       gap: 10px;
     }
-    .preview-title{
+    .fc-title{
       font-size: 14px;
       font-weight: 750;
       letter-spacing: 0.2px;
       margin: 0;
     }
-    .preview-tag{
+    .fc-tag{
       display: inline-flex;
       align-items: center;
-      gap: 6px;
       font-size: 11px;
       padding: 5px 10px;
       border-radius: 999px;
@@ -117,17 +109,14 @@
       color: rgba(255,255,255,0.88);
       white-space: nowrap;
     }
-    .preview-meta{
+    .fc-meta{
       margin-top: 8px;
       font-size: 12px;
       color: rgba(255,255,255,0.72);
       line-height: 1.4;
     }
-    .preview-meta b{
-      color: rgba(255,255,255,0.92);
-      font-weight: 650;
-    }
-    .preview-body{
+    .fc-meta b{ color: rgba(255,255,255,0.92); font-weight: 650; }
+    .fc-body{
       margin-top: 10px;
       padding-top: 10px;
       border-top: 1px solid rgba(255,255,255,0.10);
@@ -137,10 +126,6 @@
       white-space: pre-wrap;
       max-height: 220px;
       overflow: auto;
-    }
-    .hotspot:hover .preview-card{
-      opacity: 1;
-      transform: translate(-50%, -100%) translateY(0);
     }
 
     /* Picker overlay */
@@ -194,7 +179,7 @@
 <body>
   <div class="wrap">
     <div class="title">Every moment we lived… still lives here.</div>
-    <div class="subtitle">Hover a glowing dot to read the memory.</div>
+    <div class="subtitle">Hover directly on a tile region to reveal its note.</div>
     <div id="viewer"></div>
   </div>
 
@@ -210,7 +195,6 @@
     const BASE = "https://fridayflash-ux.github.io/Our-Story";
     const iiifInfo = BASE + "/info.json";
 
-    // Add as many memories as you like
     const memories = [
       {
         id: "m1770596922548",
@@ -228,10 +212,9 @@ Beauty appears through her thoughtful choices.
 
 Anannya does not follow fashion.
 She elevates it.`
-      },
+      }
     ];
 
-    // Viewer
     const viewer = OpenSeadragon({
       id: "viewer",
       prefixUrl: "https://cdnjs.cloudflare.com/ajax/libs/openseadragon/4.1.0/images/",
@@ -251,6 +234,12 @@ She elevates it.`
       }
     });
 
+    // one floating card overlay
+    let floatCardEl = null;
+    let floatCardVisible = false;
+    let activeMemoryId = null;
+    const dotEls = new Map(); // id -> dot element
+
     fetch(iiifInfo)
       .then(r => {
         if (!r.ok) throw new Error("info.json not reachable: " + r.status);
@@ -263,8 +252,10 @@ She elevates it.`
         viewer.open(info);
 
         viewer.addOnceHandler("open", () => {
-          addHotspots();
+          addDots();
+          createFloatingCard();
           initPicker();
+          enableTileHover();
         });
       })
       .catch(err => {
@@ -272,42 +263,129 @@ She elevates it.`
         alert(err.message);
       });
 
-    function addHotspots(){
+    function addDots(){
       memories.forEach(m => {
-        // center of the rect in image pixels
         const cx = m.rect.x + (m.rect.w / 2);
         const cy = m.rect.y + (m.rect.h / 2);
         const vpPoint = viewer.viewport.imageToViewportCoordinates(cx, cy);
 
-        const el = document.createElement("div");
-        el.className = "hotspot";
-
-        const card = document.createElement("div");
-        card.className = "preview-card";
-        card.innerHTML = `
-          <div class="preview-header">
-            <div>
-              <div class="preview-title">${escapeHtml(m.title || "Memory")}</div>
-              <div class="preview-meta">
-                <b>Date:</b> ${escapeHtml(m.date || "—")}<br>
-                <b>Location:</b> ${escapeHtml(m.location || "—")}<br>
-                <b>Extras:</b> ${escapeHtml(m.extra || "—")}
-              </div>
-            </div>
-            ${m.tag ? `<div class="preview-tag">${escapeHtml(m.tag)}</div>` : ""}
-          </div>
-
-          <div class="preview-body">${escapeHtml(m.summary || "")}</div>
-        `;
-        el.appendChild(card);
+        const dot = document.createElement("div");
+        dot.className = "hotspot-dot";
+        dotEls.set(m.id, dot);
 
         viewer.addOverlay({
-          element: el,
+          element: dot,
           location: vpPoint,
           placement: OpenSeadragon.Placement.CENTER,
           checkResize: false
         });
       });
+    }
+
+    function createFloatingCard(){
+      floatCardEl = document.createElement("div");
+      floatCardEl.className = "float-card";
+      floatCardEl.style.left = "-9999px";
+      floatCardEl.style.top = "-9999px";
+      viewer.addOverlay({
+        element: floatCardEl,
+        location: new OpenSeadragon.Point(0,0),
+        placement: OpenSeadragon.Placement.TOP,
+        checkResize: false
+      });
+    }
+
+    function showFloatingCardForMemory(m){
+      // update content only if changed
+      if (activeMemoryId !== m.id){
+        floatCardEl.innerHTML = `
+          <div class="fc-header">
+            <div>
+              <div class="fc-title">${escapeHtml(m.title || "Memory")}</div>
+              <div class="fc-meta">
+                <b>Date:</b> ${escapeHtml(m.date || "—")}<br>
+                <b>Location:</b> ${escapeHtml(m.location || "—")}<br>
+                <b>Extras:</b> ${escapeHtml(m.extra || "—")}
+              </div>
+            </div>
+            ${m.tag ? `<div class="fc-tag">${escapeHtml(m.tag)}</div>` : ""}
+          </div>
+          <div class="fc-body">${escapeHtml(m.summary || "")}</div>
+        `;
+        activeMemoryId = m.id;
+      }
+
+      // position the card above center of tile
+      const cx = m.rect.x + (m.rect.w / 2);
+      const cy = m.rect.y + (m.rect.h / 2);
+
+      const vpPoint = viewer.viewport.imageToViewportCoordinates(cx, cy);
+      viewer.updateOverlay(floatCardEl, vpPoint, OpenSeadragon.Placement.TOP);
+
+      // show
+      if (!floatCardVisible){
+        floatCardEl.classList.add("show");
+        floatCardVisible = true;
+      }
+
+      // activate dot visual
+      dotEls.forEach((el, id) => el.classList.toggle("is-active", id === m.id));
+    }
+
+    function hideFloatingCard(){
+      if (floatCardVisible){
+        floatCardEl.classList.remove("show");
+        floatCardVisible = false;
+      }
+      activeMemoryId = null;
+      dotEls.forEach(el => el.classList.remove("is-active"));
+    }
+
+    // Exact hover within tile rects (pixel perfect)
+    function enableTileHover(){
+      const canvasEl = viewer.canvas; // OSD canvas element
+
+      // small debounce to avoid flicker
+      let rafPending = false;
+      let lastEvent = null;
+
+      canvasEl.addEventListener("mousemove", (e) => {
+        if (window.__PICK_MODE__) return; // don't fight picker
+        lastEvent = e;
+        if (rafPending) return;
+        rafPending = true;
+        requestAnimationFrame(() => {
+          rafPending = false;
+          handleHover(lastEvent);
+        });
+      });
+
+      canvasEl.addEventListener("mouseleave", () => {
+        if (window.__PICK_MODE__) return;
+        hideFloatingCard();
+      });
+    }
+
+    function handleHover(e){
+      const rect = viewer.element.getBoundingClientRect();
+      const webPoint = new OpenSeadragon.Point(e.clientX - rect.left, e.clientY - rect.top);
+
+      const viewportPoint = viewer.viewport.pointFromPixel(webPoint);
+      const imagePoint = viewer.viewport.viewportToImageCoordinates(viewportPoint);
+
+      // find memory whose rect contains mouse
+      const hit = memories.find(m =>
+        imagePoint.x >= m.rect.x &&
+        imagePoint.x <= (m.rect.x + m.rect.w) &&
+        imagePoint.y >= m.rect.y &&
+        imagePoint.y <= (m.rect.y + m.rect.h)
+      );
+
+      if (!hit){
+        hideFloatingCard();
+        return;
+      }
+      showFloatingCardForMemory(hit);
     }
 
     function escapeHtml(s){
@@ -333,12 +411,14 @@ She elevates it.`
       function setUI(){
         btn.textContent = window.__PICK_MODE__ ? "Hotspot Picker: ON" : "Hotspot Picker: OFF";
         status.textContent = window.__PICK_MODE__ ? "Picker ON ✅ Click the mosaic" : "Click OFF to turn ON";
+        if (!window.__PICK_MODE__) out.style.display = out.value ? "block" : "none";
       }
       setUI();
 
       btn.addEventListener("click", () => {
         window.__PICK_MODE__ = !window.__PICK_MODE__;
         setUI();
+        if (window.__PICK_MODE__) hideFloatingCard();
       });
 
       copyBtn.addEventListener("click", async () => {
