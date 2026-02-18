@@ -23,21 +23,21 @@
       background: #0b0b0f;
     }
 
-    /* Hotspot styling */
+    /* Hotspot marker */
     .hotspot{
       width: 18px; height: 18px;
       border-radius: 999px;
       background: rgba(255,255,255,0.10);
       border: 1px solid rgba(255,255,255,0.26);
       box-shadow: 0 10px 22px rgba(0,0,0,0.45);
-      cursor: pointer;
+      cursor: default;
       backdrop-filter: blur(6px);
       transition: transform .18s ease, background .18s ease;
       opacity: 0;
-      pointer-events: none;
       position: relative;
+      pointer-events: auto; /* hover works */
     }
-    #viewer:hover .hotspot{ opacity: 1; pointer-events: auto; }
+    #viewer:hover .hotspot{ opacity: 1; }
 
     .hotspot::after{
       content:"";
@@ -59,118 +59,91 @@
       transform: scale(1.14);
       background: rgba(255,255,255,0.14);
       animation: softPulse 1.6s ease-out infinite;
+      z-index: 50;
     }
     .hotspot:hover::after{ opacity: 1; transform: scale(1); }
 
-    /* Netflix-ish mini preview card */
+    /* Netflix-ish FULL note card (hover reveals the whole memory) */
     .preview-card{
       position: absolute;
-      transform: translate(-50%, -115%);
-      min-width: 220px;
-      max-width: 320px;
-      padding: 10px 12px;
-      border-radius: 14px;
-      background: rgba(18,18,24,0.92);
+      left: 50%;
+      top: -12px;
+      transform: translate(-50%, -100%) translateY(10px);
+      width: min(420px, 78vw);
+      padding: 14px 14px 12px;
+      border-radius: 16px;
+      background: rgba(18,18,24,0.94);
       border: 1px solid rgba(255,255,255,0.14);
-      box-shadow: 0 24px 60px rgba(0,0,0,0.65);
+      box-shadow: 0 24px 70px rgba(0,0,0,0.72);
       color: #f2f2f7;
       opacity: 0;
-      pointer-events: none;
-      transition: opacity .14s ease, transform .14s ease;
-      backdrop-filter: blur(12px);
+      pointer-events: auto;
+      transition: opacity .16s ease, transform .16s ease;
+      backdrop-filter: blur(14px);
+    }
+    .preview-card::after{
+      content:"";
+      position: absolute;
+      left: 50%;
+      bottom: -7px;
+      width: 14px; height: 14px;
+      background: rgba(18,18,24,0.94);
+      border-right: 1px solid rgba(255,255,255,0.14);
+      border-bottom: 1px solid rgba(255,255,255,0.14);
+      transform: translateX(-50%) rotate(45deg);
+      border-radius: 2px;
+    }
+    .preview-header{
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
     }
     .preview-title{
-      font-size: 13px;
-      font-weight: 650;
+      font-size: 14px;
+      font-weight: 750;
       letter-spacing: 0.2px;
-      margin-bottom: 6px;
-    }
-    .preview-meta{
-      font-size: 12px;
-      color: rgba(255,255,255,0.72);
-      line-height: 1.35;
+      margin: 0;
     }
     .preview-tag{
-      display: inline-block;
-      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       font-size: 11px;
-      padding: 4px 8px;
+      padding: 5px 10px;
       border-radius: 999px;
       background: rgba(255,255,255,0.06);
       border: 1px solid rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.88);
+      white-space: nowrap;
+    }
+    .preview-meta{
+      margin-top: 8px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.72);
+      line-height: 1.4;
+    }
+    .preview-meta b{
+      color: rgba(255,255,255,0.92);
+      font-weight: 650;
+    }
+    .preview-body{
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,0.10);
+      font-size: 13px;
       color: rgba(255,255,255,0.86);
+      line-height: 1.55;
+      white-space: pre-wrap;
+      max-height: 220px;
+      overflow: auto;
     }
     .hotspot:hover .preview-card{
       opacity: 1;
-      transform: translate(-50%, -125%);
+      transform: translate(-50%, -100%) translateY(0);
     }
 
-    /* Modal */
-    .modal-backdrop{
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.62);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 18px;
-      z-index: 2000000;
-    }
-    .modal{
-      width: min(720px, 96vw);
-      background: rgba(20,20,26,0.96);
-      border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 18px;
-      box-shadow: 0 30px 80px rgba(0,0,0,0.70);
-      overflow: hidden;
-    }
-    .modal-header{
-      padding: 18px 18px 10px;
-      color: #f2f2f7;
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: start;
-    }
-    .modal-title{ font-size: 20px; font-weight: 600; letter-spacing: 0.2px; }
-    .close{
-      color: #c9c9d2;
-      cursor: pointer;
-      font-size: 22px;
-      line-height: 20px;
-      padding: 6px 10px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(255,255,255,0.04);
-    }
-    .close:hover{ background: rgba(255,255,255,0.08); }
-    .meta{
-      padding: 0 18px 14px;
-      color: #c9c9d2;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px 14px;
-      font-size: 14px;
-    }
-    .meta b{ color: #ececf4; font-weight: 600; }
-    .tag{
-      display: inline-block;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.10);
-      color: #e6e6ee;
-      font-size: 12px;
-      margin-top: 6px;
-    }
-    .body{
-      padding: 14px 18px 18px;
-      color: #e6e6ee;
-      font-size: 15px;
-      line-height: 1.55;
-      white-space: pre-wrap;
-    }
-
-    /* Fixed picker overlay */
+    /* Picker overlay */
     #pickerBar{
       position: fixed;
       left: 50%;
@@ -221,27 +194,8 @@
 <body>
   <div class="wrap">
     <div class="title">Every moment we lived… still lives here.</div>
-    <div class="subtitle">Hover to reveal memories. Click a circle to read the note.</div>
+    <div class="subtitle">Hover a glowing dot to read the memory.</div>
     <div id="viewer"></div>
-  </div>
-
-  <!-- Modal -->
-  <div class="modal-backdrop" id="backdrop">
-    <div class="modal" role="dialog" aria-modal="true">
-      <div class="modal-header">
-        <div>
-          <div class="modal-title" id="mTitle">Memory</div>
-          <div class="tag" id="mTag" style="display:none;"></div>
-        </div>
-        <div class="close" id="closeBtn">✕</div>
-      </div>
-      <div class="meta">
-        <div><b>Date:</b> <span id="mDate">—</span></div>
-        <div><b>Location:</b> <span id="mLoc">—</span></div>
-        <div style="grid-column:1 / -1;"><b>Extras:</b> <span id="mExtra">—</span></div>
-      </div>
-      <div class="body" id="mBody"></div>
-    </div>
   </div>
 
   <!-- Picker UI -->
@@ -256,6 +210,7 @@
     const BASE = "https://fridayflash-ux.github.io/Our-Story";
     const iiifInfo = BASE + "/info.json";
 
+    // Add as many memories as you like
     const memories = [
       {
         id: "m1770596922548",
@@ -276,31 +231,6 @@ She elevates it.`
       },
     ];
 
-    // Modal helpers
-    const backdrop = document.getElementById("backdrop");
-    const closeBtn = document.getElementById("closeBtn");
-
-    function openModal(m){
-      document.getElementById("mTitle").textContent = m.title || "Memory";
-      document.getElementById("mDate").textContent = m.date || "—";
-      document.getElementById("mLoc").textContent = m.location || "—";
-      document.getElementById("mExtra").textContent = m.extra || "—";
-      document.getElementById("mBody").textContent = m.summary || "";
-
-      const tagEl = document.getElementById("mTag");
-      if (m.tag){ tagEl.style.display = "inline-block"; tagEl.textContent = m.tag; }
-      else { tagEl.style.display = "none"; }
-
-      backdrop.style.display = "flex";
-    }
-
-    function closeModal(){ backdrop.style.display = "none"; }
-
-    closeBtn.addEventListener("click", closeModal);
-    backdrop.addEventListener("click", (e)=>{ if(e.target === backdrop) closeModal(); });
-    document.querySelector(".modal").addEventListener("click", (e) => e.stopPropagation());
-    document.addEventListener("keydown", (e)=>{ if(e.key === "Escape") closeModal(); });
-
     // Viewer
     const viewer = OpenSeadragon({
       id: "viewer",
@@ -316,7 +246,8 @@ She elevates it.`
       maxZoomPixelRatio: 2,
       gestureSettingsMouse: {
         clickToZoom: false,
-        dblClickToZoom: true
+        dblClickToZoom: true,
+        dragToPan: true
       }
     });
 
@@ -343,6 +274,7 @@ She elevates it.`
 
     function addHotspots(){
       memories.forEach(m => {
+        // center of the rect in image pixels
         const cx = m.rect.x + (m.rect.w / 2);
         const cy = m.rect.y + (m.rect.h / 2);
         const vpPoint = viewer.viewport.imageToViewportCoordinates(cx, cy);
@@ -353,23 +285,21 @@ She elevates it.`
         const card = document.createElement("div");
         card.className = "preview-card";
         card.innerHTML = `
-          <div class="preview-title">${m.title || "Memory"}</div>
-          <div class="preview-meta">
-            ${m.date || ""}${m.date && m.location ? " • " : ""}${m.location || ""}
+          <div class="preview-header">
+            <div>
+              <div class="preview-title">${escapeHtml(m.title || "Memory")}</div>
+              <div class="preview-meta">
+                <b>Date:</b> ${escapeHtml(m.date || "—")}<br>
+                <b>Location:</b> ${escapeHtml(m.location || "—")}<br>
+                <b>Extras:</b> ${escapeHtml(m.extra || "—")}
+              </div>
+            </div>
+            ${m.tag ? `<div class="preview-tag">${escapeHtml(m.tag)}</div>` : ""}
           </div>
-          ${m.tag ? `<div class="preview-tag">${m.tag}</div>` : ""}
+
+          <div class="preview-body">${escapeHtml(m.summary || "")}</div>
         `;
         el.appendChild(card);
-
-        el.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-
-          const rect = new OpenSeadragon.Rect(m.rect.x, m.rect.y, m.rect.w, m.rect.h);
-          viewer.viewport.fitBounds(viewer.viewport.imageToViewportRectangle(rect), true);
-
-          openModal(m);
-        });
 
         viewer.addOverlay({
           element: el,
@@ -380,8 +310,18 @@ She elevates it.`
       });
     }
 
+    function escapeHtml(s){
+      return String(s ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    // Picker: click mosaic to generate a memory block
     function initPicker(){
-      let pickMode = false;
+      window.__PICK_MODE__ = false;
       let pickSize = 220;
       let lastBlock = "";
 
@@ -391,13 +331,13 @@ She elevates it.`
       const out = document.getElementById("pickOutput");
 
       function setUI(){
-        btn.textContent = pickMode ? "Hotspot Picker: ON" : "Hotspot Picker: OFF";
-        status.textContent = pickMode ? "Picker ON ✅ Click the mosaic" : "Click OFF to turn ON";
+        btn.textContent = window.__PICK_MODE__ ? "Hotspot Picker: ON" : "Hotspot Picker: OFF";
+        status.textContent = window.__PICK_MODE__ ? "Picker ON ✅ Click the mosaic" : "Click OFF to turn ON";
       }
       setUI();
 
       btn.addEventListener("click", () => {
-        pickMode = !pickMode;
+        window.__PICK_MODE__ = !window.__PICK_MODE__;
         setUI();
       });
 
@@ -413,7 +353,7 @@ She elevates it.`
       });
 
       viewer.addHandler("canvas-click", (event) => {
-        if (!pickMode) return;
+        if (!window.__PICK_MODE__) return;
 
         const webPoint = event.position;
         const viewportPoint = viewer.viewport.pointFromPixel(webPoint);
